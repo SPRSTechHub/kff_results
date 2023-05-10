@@ -3,11 +3,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:web_browser/web_browser.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import 'ad_helper.dart';
 
@@ -23,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool? adsView;
   BannerAd? _bannerAd1;
   RewardedAd? _rewardedAd;
+  late final WebViewController _controller;
 
   @override
   void initState() {
@@ -45,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     ).load();
     _loadRewardedAd();
-    Timer(const Duration(seconds: 10), () {
+    Timer(const Duration(minutes: 2), () {
       setState(() {
         if (adsView == true)
           _rewardedAd?.show(
@@ -56,6 +55,28 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     });
 
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0x00000000))
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onProgress: (int progress) {
+            // Update loading bar.
+          },
+          onPageStarted: (String url) {},
+          onPageFinished: (String url) {
+            //
+          },
+          onWebResourceError: (WebResourceError error) {},
+          onNavigationRequest: (NavigationRequest request) {
+            if (request.url.startsWith('https://www.youtube.com/')) {
+              return NavigationDecision.prevent;
+            }
+            return NavigationDecision.navigate;
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse('https://kolkataff1.in'));
     super.initState();
   }
 
@@ -72,17 +93,16 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Scaffold(
         body: SizedBox(
           child: Stack(fit: StackFit.loose, children: [
-            Browser(
-              onShare: (context, controller) {
-                Share.share('Now get KFF Results https://kolkataff1.in/',
-                    subject: 'Download today!');
-              },
+            WebViewWidget(controller: _controller),
+            /* Browser(
+              topBar: const AutoBrowserTopBar(),
               initialUriString: 'https://kolkataff1.in/',
               controller: BrowserController(
                 userAgent: 'Chrom',
                 isZoomEnabled: false,
               ),
-            ),
+              bottomBar: const AutoBrowserBottomBar(),
+            ), */
             if (adsView == true)
               Positioned(
                 left: 30,
@@ -93,6 +113,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
           ]),
         ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
+        floatingActionButton: FloatingActionButton(onPressed: () {}),
       ),
     );
   }
