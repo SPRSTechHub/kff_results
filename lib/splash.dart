@@ -56,7 +56,6 @@ class _SplashScreenState extends State<SplashScreen> {
         'exid': androidInfo.id,
         'secid': (androidInfo.model + androidInfo.hardware + androidInfo.id)
       });
-
       GetStorage().write('secid', secid);
     }
   }

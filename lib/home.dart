@@ -2,7 +2,10 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -19,17 +22,32 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   Timer? timer;
   bool? adsView;
+  bool? runAds;
   BannerAd? _bannerAd1;
   RewardedAd? _rewardedAd;
   late final WebViewController _controller;
 
+  void checkm() {
+    var mid = GetStorage().read('secid');
+    if (mid == 'RMX3085mt6785SP1A.210812.016' ||
+        mid == '21091116Imt6877TP1A.220624.014') {
+      setState(() {
+        runAds = false;
+      });
+    } else {
+      setState(() {
+        runAds = true;
+      });
+    }
+  }
+
   @override
   void initState() {
     adsView = GetStorage().read('shoAds');
-    print('AdsView: $adsView');
+    checkm();
     BannerAd(
       adUnitId: AdHelper.bannerAdUnitIdA,
-      request: AdRequest(),
+      request: const AdRequest(),
       size: AdSize.banner,
       listener: BannerAdListener(
         onAdLoaded: (ad) {
@@ -46,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadRewardedAd();
     Timer(const Duration(minutes: 2), () {
       setState(() {
-        if (adsView == true)
+        if (adsView == true && runAds == true)
           _rewardedAd?.show(
             onUserEarnedReward: (_, reward) {
               //
@@ -91,32 +109,56 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-        body: SizedBox(
-          child: Stack(fit: StackFit.loose, children: [
-            WebViewWidget(controller: _controller),
-            /* Browser(
-              topBar: const AutoBrowserTopBar(),
-              initialUriString: 'https://kolkataff1.in/',
-              controller: BrowserController(
-                userAgent: 'Chrom',
-                isZoomEnabled: false,
-              ),
-              bottomBar: const AutoBrowserBottomBar(),
-            ), */
-            if (adsView == true)
-              Positioned(
-                left: 30,
-                bottom: 62,
-                child: SizedBox(
-                  child: _showMyAds(),
+        body: WillPopScope(
+          onWillPop: () => _goBack(context),
+          child: SizedBox(
+            child: Stack(fit: StackFit.loose, children: [
+              WebViewWidget(controller: _controller),
+              if (adsView == true && runAds == true)
+                Positioned(
+                  left: 30,
+                  bottom: 82,
+                  child: SizedBox(
+                    child: _showMyAds(),
+                  ),
                 ),
-              ),
-          ]),
+            ]),
+          ),
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
-        floatingActionButton: FloatingActionButton(onPressed: () {}),
       ),
     );
+  }
+
+  Future<bool> _goBack(BuildContext context) async {
+    if (await _controller.canGoBack()) {
+      _controller.goBack();
+      return Future.value(false);
+    } else {
+      // ignore: use_build_context_synchronously
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.black54, // user must tap button!
+        builder: (context) => AlertDialog(
+          title: const Text('Do you want to exit'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('No'),
+            ),
+            TextButton(
+              onPressed: () {
+                SystemNavigator.pop();
+              },
+              child: const Text('Yes'),
+            ),
+          ],
+        ),
+      );
+      return Future.value(true);
+    }
   }
 
   Widget _showMyAds() {
