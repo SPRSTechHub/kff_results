@@ -1,3 +1,5 @@
+// ignore_for_file: unused_catch_clause
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/material.dart';
@@ -39,7 +41,7 @@ void main() async {
     ));
     await remoteConfig.fetchAndActivate();
   } on PlatformException catch (exception) {
-    print(exception);
+    //print(exception);
   }
   var shoAds = remoteConfig.getBool("shoAds");
   GetStorage().write('shoAds', shoAds);

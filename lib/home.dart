@@ -2,12 +2,12 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:kff_results/app_lifecycle_reactor.dart';
+import 'package:kff_results/app_open_ad_manager.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'ad_helper.dart';
@@ -20,12 +20,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  Timer? timer;
   bool? adsView;
   bool? runAds;
   BannerAd? _bannerAd1;
   RewardedAd? _rewardedAd;
   late final WebViewController _controller;
+
+  late AppLifecycleReactor _appLifecycleReactor;
 
   void checkm() {
     var mid = GetStorage().read('secid');
@@ -39,12 +40,21 @@ class _HomeScreenState extends State<HomeScreen> {
         runAds = true;
       });
     }
+    //print('runAds $runAds');
   }
 
   @override
   void initState() {
+    if (!mounted) return;
+    AppOpenAdManager appOpenAdManager = AppOpenAdManager()..loadAd();
     adsView = GetStorage().read('shoAds');
+    //print('adsView $adsView');
     checkm();
+    if (adsView == true && runAds == true) {
+      _appLifecycleReactor =
+          AppLifecycleReactor(appOpenAdManager: appOpenAdManager);
+      _appLifecycleReactor.listenToAppStateChanges();
+    }
     BannerAd(
       adUnitId: AdHelper.bannerAdUnitIdA,
       request: const AdRequest(),
@@ -62,16 +72,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     ).load();
     _loadRewardedAd();
-    Timer(const Duration(minutes: 2), () {
-      setState(() {
-        if (adsView == true && runAds == true)
-          _rewardedAd?.show(
-            onUserEarnedReward: (_, reward) {
-              //
-            },
-          );
-      });
-    });
 
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -130,6 +130,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<bool> _goBack(BuildContext context) async {
+    setState(() {
+      if (adsView == true && runAds == true)
+        _rewardedAd?.show(
+          onUserEarnedReward: (_, reward) {
+            //
+          },
+        );
+    });
     if (await _controller.canGoBack()) {
       _controller.goBack();
       return Future.value(false);
@@ -167,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (_bannerAd1 != null)
           Align(
             alignment: Alignment.topCenter,
-            child: Container(
+            child: SizedBox(
               width: _bannerAd1!.size.width.toDouble(),
               height: _bannerAd1!.size.height.toDouble(),
               child: AdWidget(ad: _bannerAd1!),
@@ -180,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _loadRewardedAd() {
     RewardedAd.load(
       adUnitId: AdHelper.rewardedAdUnitId,
-      request: AdRequest(),
+      request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
           ad.fullScreenContentCallback = FullScreenContentCallback(
